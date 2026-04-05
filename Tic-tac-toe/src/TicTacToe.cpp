@@ -1,5 +1,4 @@
 #include "TicTacToe.hpp"
-constexpr int MAX_BOARD_ENTRY = 9; 
 string deducePrint(SymbolsXO s)
 {
     if(s==SymbolsXO::X)
