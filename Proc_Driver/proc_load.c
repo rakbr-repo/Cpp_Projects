@@ -7,23 +7,38 @@ MODULE_AUTHOR("Rakshith");
 MODULE_DESCRIPTION("Proc file read operation example");
 
 static struct proc_dir_entry *custom_proc_node;
+char msgBuffer[10];
 
 static ssize_t	driver_read_op(struct file *file_ptr, char __user *user_space_buffer, size_t count, loff_t *offset)
 {
     printk("Driver read operation start");
-    char ackMsg[] = "Ack!";
-    size_t len = strlen(ackMsg);
+    size_t len = strlen(msgBuffer);
     if(*offset >= len)
     {
         return 0;
     }
-    int returnValCopyToUser = copy_to_user(user_space_buffer, ackMsg, len);
+    if(copy_to_user(user_space_buffer, msgBuffer, len))
+    {
+        return -1;
+    }
     *offset+=len;
     return len;
 }
 
+static ssize_t	driver_write_op(struct file *file_ptr, const char __user *user_space_buffer, size_t count, loff_t *offset)
+{
+    printk("Driver write operation start");
+    if(copy_from_user(msgBuffer,user_space_buffer,count))
+    {
+        return -1;
+    }
+    printk("message buffer written: %s\n", msgBuffer);
+    return count;
+}
+
 struct proc_ops driver_proc_ops = {
-    .proc_read = driver_read_op
+    .proc_read = driver_read_op,
+    .proc_write = driver_write_op
 };
 
 static int my_init(void)
