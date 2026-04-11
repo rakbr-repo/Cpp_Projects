@@ -7,8 +7,23 @@ MODULE_AUTHOR("Rakshith");
 MODULE_DESCRIPTION("Proc file read operation example");
 
 static struct proc_dir_entry *custom_proc_node;
-struct proc_ops driver_proc_ops = {
 
+static ssize_t	driver_read_op(struct file *file_ptr, char __user *user_space_buffer, size_t count, loff_t *offset)
+{
+    printk("Driver read operation start");
+    char ackMsg[] = "Ack!";
+    size_t len = strlen(ackMsg);
+    if(*offset >= len)
+    {
+        return 0;
+    }
+    int returnValCopyToUser = copy_to_user(user_space_buffer, ackMsg, len);
+    *offset+=len;
+    return len;
+}
+
+struct proc_ops driver_proc_ops = {
+    .proc_read = driver_read_op
 };
 
 static int my_init(void)
