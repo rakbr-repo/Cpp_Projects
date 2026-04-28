@@ -1,10 +1,23 @@
 #include <CANReader.hpp>
 using namespace CanToCloud::Can;
 
+void CANReader::start() {
+    running = true;
+    readerThread = std::thread(&CANReader::readCANFrames, this);
+}
+
+void CANReader::stop() {
+    running = false;
+    if (readerThread.joinable()) {
+        readerThread.join();
+    }
+}
+
 bool CANReader::initializeCANReader()
 {
     sock = socket(PF_CAN, SOCK_RAW, CAN_RAW);
-    if (sock < 0) {
+    if (sock < 0) 
+    {
         perror("socket");
         return false;
     }
@@ -17,9 +30,10 @@ bool CANReader::initializeCANReader()
     addr.can_ifindex = ifr.ifr_ifindex;
 
     // 3. Bind the socket to vcan0
-    if (bind(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
+    if (bind(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) 
+    {
         perror("bind");
-        return 1false;
+        return false;
     }
     std::cout<<"Socket and Interface init successfull";
     return true;
@@ -32,7 +46,11 @@ void CANReader::registerObserver(CANObserver* observer)
 
 void CANReader::removeObserver(CANObserver* observer)
 {
-    observers.erase(std::remove(observers.begin(),observers.end(),observers), oberservers.end());
+    auto it = std::find(observers.begin(), observers.end(), observer);
+    if(it != observers.end())
+    {
+        observers.erase(it);
+    }
 }
 
 void CANReader::notifyObservers()
@@ -44,7 +62,7 @@ void CANReader::notifyObservers()
 }
 
 void CANReader::readCANFrames() {
-    while (true) 
+    while (running) 
     {
         int nbytes = read(sock, &frame, sizeof(struct can_frame));
         if (nbytes < 0) 

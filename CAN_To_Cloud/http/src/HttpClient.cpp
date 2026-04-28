@@ -1,5 +1,6 @@
 #include <HttpClient.hpp>
 using namespace CanToCloud::http;
+std::unique_ptr<HttpClient> HttpClient::httpClientInstance = nullptr;
 
 bool HttpClient::initializeCurl()
 {
@@ -46,7 +47,7 @@ std::string HttpClient::getRequest(std::string &url)
         std::string response;
         curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
         curl_easy_setopt(curl, CURLOPT_HTTPGET, 1L);
-        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, respCallBack);
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, HttpClient::respCallBack);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
 
         return response;
@@ -56,4 +57,9 @@ std::string HttpClient::getRequest(std::string &url)
         std::cout<<"curl not initialized"<<std::endl;
         return std::string("");
     }
+}
+
+void HttpClient::destroyCurl()
+{
+    if (curl) curl_easy_cleanup(curl);
 }
