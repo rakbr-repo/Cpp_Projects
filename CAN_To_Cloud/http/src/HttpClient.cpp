@@ -4,25 +4,27 @@ std::unique_ptr<HttpClient> HttpClient::httpClientInstance = nullptr;
 
 bool HttpClient::initializeCurl()
 {
-    CURL *curl = curl_easy_init();
-    return curl != nullptr ? true : false;
+    curl_ = curl_easy_init();
+    return curl_ != nullptr ? true : false;
 }
 
 bool HttpClient::publish(std::string &url,std::string &data)
 {
-    if(curl)
+    if(curl_)
     {
         CURLcode result;
-        curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-        curl_easy_setopt(curl, CURLOPT_HTTPPOST, 1L);
-        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, data.c_str());
-        result = curl_easy_perform(curl);
+        curl_easy_setopt(curl_, CURLOPT_URL, url.c_str());
+        curl_easy_setopt(curl_, CURLOPT_HTTPPOST, 1L);
+        curl_easy_setopt(curl_, CURLOPT_POSTFIELDS, data.c_str());
+        result = curl_easy_perform(curl_);
         if(result!=CURLE_OK)
         {
+            std::cout<<"Publish failed due to : "<<(int)result<<std::endl;
             return false;
         }
         else
         {
+            std::cout<<"Publish successful"<<std::endl;
             return true;
         }
     }
@@ -42,13 +44,13 @@ size_t HttpClient::respCallBack(void* contents, size_t size, size_t nmemb, void*
 
 std::string HttpClient::getRequest(std::string &url)
 {
-    if(curl)
+    if(curl_)
     {
         std::string response;
-        curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-        curl_easy_setopt(curl, CURLOPT_HTTPGET, 1L);
-        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, HttpClient::respCallBack);
-        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
+        curl_easy_setopt(curl_, CURLOPT_URL, url.c_str());
+        curl_easy_setopt(curl_, CURLOPT_HTTPGET, 1L);
+        curl_easy_setopt(curl_, CURLOPT_WRITEFUNCTION, HttpClient::respCallBack);
+        curl_easy_setopt(curl_, CURLOPT_WRITEDATA, &response);
 
         return response;
     }
@@ -61,5 +63,5 @@ std::string HttpClient::getRequest(std::string &url)
 
 void HttpClient::destroyCurl()
 {
-    if (curl) curl_easy_cleanup(curl);
+    if (curl_) curl_easy_cleanup(curl_);
 }

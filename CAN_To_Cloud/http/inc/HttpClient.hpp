@@ -12,7 +12,7 @@ namespace http
         private:
         static std::unique_ptr<HttpClient> httpClientInstance;
         static size_t respCallBack(void* contents, size_t size, size_t nmemb, void* userp);
-        CURL *curl;
+        CURL *curl_;
 
         public:
         HttpClient(const HttpClient&) = delete;

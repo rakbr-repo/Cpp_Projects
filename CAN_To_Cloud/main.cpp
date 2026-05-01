@@ -27,8 +27,11 @@ int main()
     std::signal(SIGINT, signalHandler);
     std::signal(SIGTERM, signalHandler);
 
-    std::cout << "Initialize Curl" <<std::endl;
-    CanToCloud::http::HttpClient::getInstance().initializeCurl();
+    std::cout << "Initialize Curl called" <<std::endl;
+    if(CanToCloud::http::HttpClient::getInstance().initializeCurl())
+    {
+        std::cout<<"Curl init success"<<std::endl;
+    }
     CanToCloud::Can::CANReader reader;
     CanToCloud::Json::JsonBuilder builder;
     std::cout << "registerObserver -> Json Builder" <<std::endl;

@@ -43,5 +43,6 @@ void JsonBuilder::update(struct can_frame frame)
                               .addTimestamp()
                               .addMetadata("source", "CANReader")
                               .build();
+    std::cout<<"Payload created : "<<payload<<std::endl;
     HttpClient::getInstance().publish(url, payload);
 }
