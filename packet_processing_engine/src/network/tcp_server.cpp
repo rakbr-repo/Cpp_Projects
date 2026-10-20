@@ -4,7 +4,10 @@
 #include <sys/socket.h>
 #include <memory>
 
-int tcpServer::initializeServerSocket()
+TcpServer::TcpServer() : connHandler(std::make_unique<ConnectionHandler>())
+{}
+
+int TcpServer::initializeServerSocket()
 {
     //create server socket
     serverSocket = socket(AF_INET, SOCK_STREAM, 0);
@@ -50,5 +53,21 @@ int tcpServer::initializeServerSocket()
     return serverSocket;
 }
 
+void TcpServer::run()
+{
+    if(serverSocket<0)
+    {
+        return;
+    }
+    connHandler->handleClientRequests(serverSocket);
+}
 
+void TcpServer::closeServer()
+{
+    if(serverSocket<0)
+    {
+        return;
+    }
+    connHandler->closeServerConnection(serverSocket);
+}
 

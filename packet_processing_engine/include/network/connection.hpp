@@ -6,7 +6,7 @@
 #include <netinet/in.h>
 
 
-class connectionHandler
+class ConnectionHandler
 {
     public:
     void handleClientRequests(int serverSocket);

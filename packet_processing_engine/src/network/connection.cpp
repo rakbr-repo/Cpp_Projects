@@ -3,7 +3,7 @@
 #include <netinet/in.h>
 #include <sys/socket.h>
 
-void connectionHandler::handleClientRequests(int serverSocket)
+void ConnectionHandler::handleClientRequests(int serverSocket)
 {
     sockaddr_in clientAddr{};
     socklen_t clientAddrLen = sizeof(clientAddr);
@@ -36,7 +36,7 @@ void connectionHandler::handleClientRequests(int serverSocket)
     close(clientSocket);
 }
 
-void connectionHandler::closeServerConnection(int serverSocket)
+void ConnectionHandler::closeServerConnection(int serverSocket)
 {
     if(serverSocket >= 0)
     {

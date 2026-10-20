@@ -6,8 +6,8 @@
 
 int main()
 {
-    std::unique_ptr<tcpServer> tcpServer1 = std::make_unique<tcpServer>();
-    int tcpServerSocket = tcpServer1->initializeServerSocket();
-    tcpServer1->handleClientRequests(tcpServerSocket);
-    tcpServer1->closeServerConnection(tcpServerSocket);
+    std::unique_ptr<TcpServer> tcpServer1 = std::make_unique<TcpServer>();
+    tcpServer1->initializeServerSocket();
+    tcpServer1->run();
+    tcpServer1->closeServer();
 }
