@@ -1,11 +1,46 @@
 #include "network/tcp_server.hpp"
 #include <asm-generic/socket.h>
+#include <cstdint>
 #include <cstdio>
+#include <fcntl.h>
 #include <sys/socket.h>
 #include <memory>
 
 TcpServer::TcpServer() : connHandler(std::make_unique<ConnectionHandler>())
 {}
+
+bool TcpServer::setNonBlocking(int fd)
+{
+    int flags = fnctl(fd, F_GETFL, 0);
+
+    if(flags == -1)
+    {
+        perror("flag err");
+        return false;
+    }
+
+    if(fcntl(fd, F_SETFL, flags | O_NONBLOCK) == -1)
+    {
+        perror("set flag err");
+        return false;
+    }
+
+    return true;
+}
+
+bool TcpServer::addToEpoll(int fd , std::uint32_t events)
+{
+    epoll_event event{};
+    event.events = events;
+    event.data.fd = fd;
+
+    if(epoll_ctl(epollFd, EPOLL_CTL_ADD, fd, &events) == -1)
+    {
+        std:cerr<<"Epoll ctl add err : "<<stderr(errno) <<"\n";
+        return false;
+    }
+    return true;
+}
 
 int TcpServer::initializeServerSocket()
 {
@@ -15,6 +50,11 @@ int TcpServer::initializeServerSocket()
     if(serverSocket == -1)
     {
         perror("failed to create server socket");
+        return -1;
+    }
+
+    if(!setNonBlocking(serverSocket))
+    {
         return -1;
     }
 
@@ -46,6 +86,18 @@ int TcpServer::initializeServerSocket()
         perror("listen failed");
         close(serverSocket);
         serverSocket = -1;
+        return -1;
+    }
+
+    epollFd = epoll_create1(EPOLL_CLOEXEC);
+    if(epollFd == -1)
+    {
+        perror("epoll create failed\n");
+        return -1;
+    }
+
+    if(!addToEpoll(serverSocket, EPOLLIN))
+    {
         return -1;
     }
 

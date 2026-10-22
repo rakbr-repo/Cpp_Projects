@@ -10,5 +10,6 @@ class ConnectionHandler
 {
     public:
     void handleClientRequests(int serverSocket);
+    void handleMessage(int clientSocket, const std::string& message);
     void closeServerConnection(int serverSocket);
 };

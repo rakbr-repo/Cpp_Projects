@@ -36,6 +36,11 @@ void ConnectionHandler::handleClientRequests(int serverSocket)
     close(clientSocket);
 }
 
+void ConnectionHandler::handleMessage(int clientSocket, const std::string& message)
+{
+    std::cout<<"Client socket fd : "<<clientSocket<<" message is"<<message<<std::endl;
+}
+
 void ConnectionHandler::closeServerConnection(int serverSocket)
 {
     if(serverSocket >= 0)
