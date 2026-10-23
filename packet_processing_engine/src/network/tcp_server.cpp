@@ -1,10 +1,14 @@
 #include "network/tcp_server.hpp"
 #include <asm-generic/socket.h>
+#include <cerrno>
 #include <cstdint>
 #include <cstdio>
 #include <fcntl.h>
-#include <sys/socket.h>
+#include <iostream>
 #include <memory>
+#include <string>
+#include <sys/epoll.h>
+#include <sys/socket.h>
 
 TcpServer::TcpServer() : connHandler(std::make_unique<ConnectionHandler>())
 {}
@@ -105,21 +109,149 @@ int TcpServer::initializeServerSocket()
     return serverSocket;
 }
 
-void TcpServer::run()
+void TcpServer::acceptNewClients()
 {
-    if(serverSocket<0)
+    while(true)
     {
+        int clientSocket = accept4(serverSocket, nullptr, nullptr, SOCK_NONBLOCK | SOCK_CLOEXEC);
+        if(clientSocket == -1)
+        {
+            if(errno == EINTR)
+            {
+                continue;
+            }
+            if(errno == EAGAIN || errno == EWOULDBLOCK)
+            {
+                break;
+            }
+            std::cerr<<"Client socket accept4 error : "<<stderr(errno)<<"\n";
+            break;
+        }
+
+        if(!addToEpoll(clientSocket, EPOLLIN | EPOLLRDHUP))
+        {
+            close(clientSocket);
+            continue;
+        }
+        receiveBuffers.emplace(clientSocket, std::string{});
+        std::cout<<"Accepted new client : "<<clientSocket<<std::endl;
+    }
+}
+
+void TcpServer::closeClient(int clientSocket)
+{
+    epoll_ctl(epollFd, EPOLL_CTL_DEL, clientSocket, nullptr);
+    close(clientSocket);
+    receiveBuffers.erase(clientSocket);
+    std::cout<<"Client Disconnected\n"<<std:endl;
+}
+
+void TcpServer::readClientData(int clientSocket)
+{
+    char buffer[4096];
+    while(true)
+    {
+        std::ssize_t bytesRead = recv(clientSocket, buffer, sizeof(buffer), 0);
+        if(bytesRead > 0)
+        {
+            auto it = receiveBuffers.find(clientSocket);
+            if(it == receiveBuffers.end())
+            {
+                closeClient(clientSocket);
+                return;
+            }
+
+            std::string pending = it->second;
+            pending.emplace(buffer, static_cast<std::size_t>(bytesRead));
+
+            std::size_t newLinePos;
+            while((newLinePos = pending.find('\n')) != std::npos)
+            {
+                std::string message = pending.substr(0, newLinePos);
+                if(!message.empty() && message.back() == '\r')
+                {
+                    message.pop_back();
+                }
+                pending.erase(0, newLinePos+1);
+                connHandler->handleMessage(clientSocket, message);
+            }
+            continue;
+        }
+
+        if(bytesRead == 0)
+        {
+            closeClient(clientSocket);
+            return;
+        }
+
+        if(errno == EINTR)
+        {
+            continue;
+        }
+        if(errno == EAGAIN || errno == EWOULDBLOCK)
+        {
+            closeClient(clientSocket);
+            return;
+        }
+        std::cerr<<" rcv read client data err : "<<stderr(errno)<<"\n";
+        closeClient(clientSocket);
         return;
     }
-    connHandler->handleClientRequests(serverSocket);
+}
+
+void TcpServer::run()
+{
+    if(serverSocket == -1 && epollFd == -1)
+    {
+        std::cerr<<"Initialize before run call\n"<<"\n";
+        return;
+    }
+
+    bool running = true;
+    epoll_event events[64];
+
+    while(running)
+    {
+        int eventCount = epoll_wait(epollFd, events,64, -1);
+
+        if(eventCount == -1)
+        {
+            if(errno == EINTR)
+            {
+                continue;
+            }
+            std::cerr<<"epoll wait : "<<stderr(errno)<<"\n";
+            break;
+        }
+
+        for(int i=0; i < eventCount; i++)
+        {
+            int fd = events[i].data.fd;
+            std::unint32_t flags = events[i].events;
+
+            if(fd == serverSocket)
+            {
+                if(flags & EPOLLIN)
+                {
+                    acceptNewClients();
+                }
+                continue;
+            }
+
+            if(flags & EPOLLIN)
+            {
+                readClientData(fd);
+            }
+
+            if((receiveBuffers.find(fd)!=receiveBuffers.end()) && (flags & (EPOLLERR | EPOLLHUP |EPOLLRDHUP)))
+            {
+                closeClient(fd);
+            }
+        }
+    }
 }
 
 void TcpServer::closeServer()
 {
-    if(serverSocket<0)
-    {
-        return;
-    }
-    connHandler->closeServerConnection(serverSocket);
 }
 
