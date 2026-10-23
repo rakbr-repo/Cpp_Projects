@@ -25,6 +25,7 @@ class TcpServer
     bool addToEpoll(int fd, std::uint32_t events);
     void acceptNewClients();
     void closeClient(int clientSocket);
+    
     public:
     TcpServer();
     int initializeServerSocket();

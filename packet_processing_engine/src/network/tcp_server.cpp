@@ -253,5 +253,33 @@ void TcpServer::run()
 
 void TcpServer::closeServer()
 {
+    running = false;
+    for(const auto& [fd, message] : receiveBuffers)
+    {
+        if(fd != -1)
+        {
+            if(epollFd != -1)
+            {
+                epoll_ctl(epollFd, EPOLL_CTL_DEL, fd, nullptr);
+            }
+            close(fd);
+        }
+    }
+    receiveBuffers.clear();
+    if(serverSocket != -1)
+    {
+        if(epollFd != -1)
+        {
+            epoll_ctl(epollFd, EPOLL_CTL_DEL, serverSocket, nullptr);
+        }
+        close(serverSocket);
+        serverSocket = -1;
+    }
+
+    if(epollFd != -1)
+    {
+        close(epollFd);
+        epollFd = -1;
+    }
 }
 

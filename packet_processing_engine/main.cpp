@@ -7,7 +7,11 @@
 int main()
 {
     std::unique_ptr<TcpServer> tcpServer1 = std::make_unique<TcpServer>();
-    tcpServer1->initializeServerSocket();
+    if(tcpServer1->initializeServerSocket()!=0)
+    {
+        std::cout<<"Failed to init tcp server\n";
+        return 1;
+    }
     tcpServer1->run();
-    tcpServer1->closeServer();
+    return 0;
 }
