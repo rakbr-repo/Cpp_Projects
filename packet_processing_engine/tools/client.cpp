@@ -17,7 +17,7 @@ int main()
         return 1;
     }
 
-    sockaddr_in serverAddr;
+    sockaddr_in serverAddr{};
     serverAddr.sin_family = AF_INET;
     serverAddr.sin_port = htons(8080);
     serverAddr.sin_addr.s_addr = INADDR_ANY;
@@ -36,7 +36,7 @@ int main()
         return 1;
     }
 
-    const char* message = "Hello! Server";
+    const char* message = "Hello! Server\n";
     size_t messageLength = strlen(message);
     size_t totalBytesSent = 0;
 
@@ -44,9 +44,13 @@ int main()
     {
         ssize_t bytesSent = send(clientSocket, message + totalBytesSent, messageLength-totalBytesSent,0);
 
-        if(bytesSent == -1)
+        if (bytesSent <= 0)
         {
-            perror("send");
+            if (bytesSent == -1)
+                perror("send");
+            else
+                std::cerr << "send returned zero\n";
+
             close(clientSocket);
             return 1;
         }
