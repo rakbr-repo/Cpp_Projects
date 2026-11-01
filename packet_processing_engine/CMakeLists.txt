@@ -11,6 +11,8 @@ add_executable(packet_server
     main.cpp
     src/network/connection.cpp
     src/network/tcp_server.cpp
+    src/processing/packet_processor.cpp
+    src/processing/worker_pool.cpp
 )
 
 target_include_directories(packet_server PRIVATE include)
