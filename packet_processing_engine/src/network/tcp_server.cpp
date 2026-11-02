@@ -1,16 +1,22 @@
 #include "network/tcp_server.hpp"
 #include <asm-generic/socket.h>
 #include <cerrno>
+#include <climits>
 #include <cstdint>
 #include <cstdio>
 #include <fcntl.h>
+#include <fstream>
 #include <iostream>
 #include <memory>
 #include <string>
 #include <sys/epoll.h>
+#include <sys/eventfd.h>
 #include <sys/socket.h>
+#include <sys/types.h>
+#include <unistd.h>
 
-TcpServer::TcpServer() : connHandler(std::make_unique<ConnectionHandler>())
+TcpServer::TcpServer(BoundedQueue<Message>& responseQueue) : 
+connHandler(std::make_unique<ConnectionHandler>()) , responseQueue(responseQueue)
 {}
 
 bool TcpServer::setNonBlocking(int fd)
@@ -101,6 +107,17 @@ int TcpServer::initializeServerSocket()
     }
 
     if(!addToEpoll(serverSocket, EPOLLIN))
+    {
+        return -1;
+    }
+
+    responseEventFd = eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
+    if(responseEventFd == -1)
+    {
+        perror("eventfd\n");
+        return -1;
+    }
+    if(!addToEpoll(responseEventFd, EPOLLIN))
     {
         return -1;
     }
@@ -199,6 +216,54 @@ void TcpServer::readClientData(int clientSocket)
     }
 }
 
+void TcpServer::handleResponseEvent()
+{
+    std::uint64_t counter;
+    ssize_t bytes = read(responseEventFd, &counter, sizeof(counter));
+    if (bytes == sizeof(counter))
+    {
+        std::cout << "Worker notifications received: "
+                  << counter << std::endl;
+    }
+    else if (bytes == -1 && errno != EAGAIN)
+    {
+        perror("eventfd read");
+        return;
+    }
+
+    while(auto response = responseQueue.popTillEmpty())
+    {
+        size_t totalBytes = response->payload.size();
+        size_t bytesSent = 0;
+        while(bytesSent < totalBytes)
+        {
+            ssize_t bytes = send(response->clientSocket, response->payload.data() + bytesSent, totalBytes-bytesSent, 0);
+            if(bytes > 0)
+            {
+                bytesSent+=bytes;
+                std::cout<<"Response bytes sent: "<<bytesSent<<endl;
+                continue;
+            }
+            else if(bytes == -1 && errno == EINTR)
+            {
+                continue;
+            }
+            else if (bytes == -1 && (errno == EAGAIN || errno == EWOULDBLOCK))
+            {
+                // Preserve unsent data and wait for EPOLLOUT.
+                break;
+            }
+            else
+            {
+                // Handle socket error.
+                perror("Socket error\n");
+                break;
+            }
+        }
+        std::cout<<"Response data : "<<response->payload<<std::endl;
+    }
+}
+
 void TcpServer::run()
 {
     if(serverSocket == -1 && epollFd == -1)
@@ -234,6 +299,15 @@ void TcpServer::run()
                 if(flags & EPOLLIN)
                 {
                     acceptNewClients();
+                }
+                continue;
+            }
+
+            if(fd == responseEventFd)
+            {
+                if(flags & EPOLLIN)
+                {
+                    handleResponseEvent();
                 }
                 continue;
             }

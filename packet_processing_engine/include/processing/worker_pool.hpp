@@ -3,20 +3,22 @@
 #include "common/message.hpp"
 #include "packet_processor.hpp"
 #include "queue/bounded_queue.hpp"
+#include "common/message.hpp"
 #include <thread>
 #include <vector>
 
 class WorkerPool
 {
     private:
-    BoundedQueue<Message>& bQueue;
+    BoundedQueue<Message>& requestQueue;
+    BoundedQueue<Message>& responseQueue;
     std::vector<std::thread> workers;
     PacketProcessor& processor;
     std::size_t numberOfThreads;
     void workerLoop();
     public:
-    WorkerPool(BoundedQueue<Message>& queue, int& numberOfThreads);
+    WorkerPool(BoundedQueue<Message>& requestQueue, BoundedQueue<Message>& responseQueue, int& numberOfThreads);
 
-    void startWorker();
+    void startWorkers();
     void shutdown();
 };

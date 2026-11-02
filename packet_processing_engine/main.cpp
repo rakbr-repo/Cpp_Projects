@@ -3,10 +3,12 @@
 #include "include/network/tcp_server.hpp"
 #include "include/network/tcp_server.hpp"
 #include "include/network/connection.hpp"
+#include "include/queue/bounded_queue.hpp"
 
 int main()
 {
-    std::unique_ptr<TcpServer> tcpServer1 = std::make_unique<TcpServer>();
+    BoundedQueue<Message> responseQueue(100);
+    std::unique_ptr<TcpServer> tcpServer1 = std::make_unique<TcpServer>(responseQueue);
     if(tcpServer1->initializeServerSocket()!=0)
     {
         std::cout<<"Failed to init tcp server\n";

@@ -47,12 +47,32 @@ class BoundedQueue
         return true;
     }
 
-    std::optional<T> pop()
+    std::optional<T> pop() 
     {
         std::unique_lock<std::mutex> lock(mtx);
         notEmpty.wait(lock,[this]{
             return !storageQ.empty() || closed;
         });
+
+        if (storageQ.empty())
+        {
+            return std::nullopt;
+        }
+
+        T message = std::move(storageQ.front());
+        storageQ.pop();
+
+        lock.unlock();
+        notFull.notify_one();
+
+        return message;
+    }
+
+    //Used by response Queues to handle all the responses that are waiting in the queue,
+    //If we use normal pop() , then after the last pop the conditional wait gets stuck and new client connections will not be handled
+    std::optional<T> popTillEmpty() 
+    {
+        std::unique_lock<std::mutex> lock(mtx);
 
         if (storageQ.empty())
         {
