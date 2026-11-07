@@ -12,23 +12,26 @@ PacketProcessingResult PacketProcesser::process(Message& message)
     }
     else if(message.payload == "CONFIG")
     {
-        return handleSetConfig(payload);
+        return handleSetConfig(message.payload);
     }
 
     return {UNKNOWN_COMMAND, "invalid command"};
 }
 
-PacketProcessingResult handlePing()
+PacketProcessingResult PacketProcesser::handlePing()
 {
     return {SUCCESS, "PONG"};
 }
 
-PacketProcessingResult handleGetStatus()
+PacketProcessingResult PacketProcesser::handleGetStatus()
 {
     return {SUCCESS, "STATUS:RUNNING"};
 }
 
-PacketProcessingResult handleSetConfig(std::string& config)
+PacketProcessingResult PacketProcesser::handleSetConfig(std::string& config)
 {
     //To be implemented
+    PacketProcessingResult res;
+    res.response = config;
+    return res;
 }

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "common/message.hpp"
-#include "packet_processor.hpp"
+#include "processing/packet_processor.hpp"
 #include "queue/bounded_queue.hpp"
 #include "common/message.hpp"
 #include <thread>
@@ -13,12 +13,12 @@ class WorkerPool
     BoundedQueue<Message>& requestQueue;
     BoundedQueue<Message>& responseQueue;
     std::vector<std::thread> workers;
-    PacketProcessor& processor;
+    PacketProcesser& processor;
     std::size_t numberOfThreads;
-    void workerLoop();
+    void workerPool();
     public:
-    WorkerPool(BoundedQueue<Message>& requestQueue, BoundedQueue<Message>& responseQueue, int& numberOfThreads);
+    WorkerPool(BoundedQueue<Message>& requestQueue, BoundedQueue<Message>& responseQueue, PacketProcesser& processor, std::size_t numberOfThreads);
 
     void startWorkers();
-    void shutdown();
+    void shutDown();
 };

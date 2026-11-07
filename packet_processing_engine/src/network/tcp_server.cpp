@@ -15,13 +15,13 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-TcpServer::TcpServer(BoundedQueue<Message>& responseQueue) : 
-connHandler(std::make_unique<ConnectionHandler>()) , responseQueue(responseQueue)
+TcpServer::TcpServer(BoundedQueue<Message>& requestQueue, BoundedQueue<Message>& responseQueue) : 
+connHandler(std::make_unique<ConnectionHandler>()) , requestQueue(requestQueue), responseQueue(responseQueue) , running(true)
 {}
 
 bool TcpServer::setNonBlocking(int fd)
 {
-    int flags = fnctl(fd, F_GETFL, 0);
+    int flags = fcntl(fd, F_GETFL, 0);
 
     if(flags == -1)
     {
@@ -44,9 +44,9 @@ bool TcpServer::addToEpoll(int fd , std::uint32_t events)
     event.events = events;
     event.data.fd = fd;
 
-    if(epoll_ctl(epollFd, EPOLL_CTL_ADD, fd, &events) == -1)
+    if(epoll_ctl(epollFd, EPOLL_CTL_ADD, fd, &event) == -1)
     {
-        std:cerr<<"Epoll ctl add err : "<<stderr(errno) <<"\n";
+        std::cerr<<"Epoll ctl add err : "<<std::strerror(errno) <<"\n";
         return false;
     }
     return true;
@@ -141,7 +141,7 @@ void TcpServer::acceptNewClients()
             {
                 break;
             }
-            std::cerr<<"Client socket accept4 error : "<<stderr(errno)<<"\n";
+            std::cerr<<"Client socket accept4 error : "<<std::strerror(errno)<<"\n";
             break;
         }
 
@@ -160,7 +160,7 @@ void TcpServer::closeClient(int clientSocket)
     epoll_ctl(epollFd, EPOLL_CTL_DEL, clientSocket, nullptr);
     close(clientSocket);
     receiveBuffers.erase(clientSocket);
-    std::cout<<"Client Disconnected\n"<<std:endl;
+    std::cout<<"Client Disconnected\n"<<std::endl;
 }
 
 void TcpServer::readClientData(int clientSocket)
@@ -168,7 +168,7 @@ void TcpServer::readClientData(int clientSocket)
     char buffer[4096];
     while(true)
     {
-        std::ssize_t bytesRead = recv(clientSocket, buffer, sizeof(buffer), 0);
+        std::size_t bytesRead = recv(clientSocket, buffer, sizeof(buffer), 0);
         if(bytesRead > 0)
         {
             auto it = receiveBuffers.find(clientSocket);
@@ -179,10 +179,11 @@ void TcpServer::readClientData(int clientSocket)
             }
 
             std::string pending = it->second;
-            pending.emplace(buffer, static_cast<std::size_t>(bytesRead));
+            pending.append(buffer, static_cast<std::size_t>(bytesRead));
+            std::cout<<"Pending buffer after emplace : "<<pending<<std::endl;
 
             std::size_t newLinePos;
-            while((newLinePos = pending.find('\n')) != std::npos)
+            while((newLinePos = pending.find('\n')) != std::string::npos)
             {
                 std::string message = pending.substr(0, newLinePos);
                 if(!message.empty() && message.back() == '\r')
@@ -190,8 +191,14 @@ void TcpServer::readClientData(int clientSocket)
                     message.pop_back();
                 }
                 pending.erase(0, newLinePos+1);
-                connHandler->handleMessage(clientSocket, message);
+                Message reqMsg;
+                reqMsg.clientSocket = clientSocket;
+                std::cout<<"Message pushed : "<<message<<std::endl;
+                reqMsg.payload = std::move(message);
+                requestQueue.push(std::move(reqMsg));
+                // connHandler->handleMessage(clientSocket, message);
             }
+            // it->second = std::move(pending);
             continue;
         }
 
@@ -207,10 +214,9 @@ void TcpServer::readClientData(int clientSocket)
         }
         if(errno == EAGAIN || errno == EWOULDBLOCK)
         {
-            closeClient(clientSocket);
             return;
         }
-        std::cerr<<" rcv read client data err : "<<stderr(errno)<<"\n";
+        std::cerr<<" rcv read client data err : "<<std::strerror(errno)<<"\n";
         closeClient(clientSocket);
         return;
     }
@@ -241,7 +247,7 @@ void TcpServer::handleResponseEvent()
             if(bytes > 0)
             {
                 bytesSent+=bytes;
-                std::cout<<"Response bytes sent: "<<bytesSent<<endl;
+                std::cout<<"Response bytes sent: "<<bytesSent<<std::endl;
                 continue;
             }
             else if(bytes == -1 && errno == EINTR)
@@ -266,13 +272,12 @@ void TcpServer::handleResponseEvent()
 
 void TcpServer::run()
 {
-    if(serverSocket == -1 && epollFd == -1)
+    if(serverSocket == -1 || epollFd == -1 || responseEventFd == -1)
     {
         std::cerr<<"Initialize before run call\n"<<"\n";
         return;
     }
 
-    bool running = true;
     epoll_event events[64];
 
     while(running)
@@ -285,14 +290,14 @@ void TcpServer::run()
             {
                 continue;
             }
-            std::cerr<<"epoll wait : "<<stderr(errno)<<"\n";
+            std::cerr<<"epoll wait : "<<std::strerror(errno)<<"\n";
             break;
         }
 
         for(int i=0; i < eventCount; i++)
         {
             int fd = events[i].data.fd;
-            std::unint32_t flags = events[i].events;
+            std::uint32_t flags = events[i].events;
 
             if(fd == serverSocket)
             {
@@ -355,5 +360,34 @@ void TcpServer::closeServer()
         close(epollFd);
         epollFd = -1;
     }
+
+    if(responseEventFd != -1)
+    {
+        close(responseEventFd);
+        responseEventFd = -1;
+    }
 }
 
+void TcpServer::testConsumer(BoundedQueue<Message>& responseQueue)
+{
+    while(true)
+    {
+        auto msg = requestQueue.pop();
+
+        if(msg)
+        {
+            std::cout<<"Message popped from consumer : "<<msg->payload<<std::endl;
+            // Message response;
+            // response.clientSocket = msg->clientSocket;
+            // response.payload = msg->payload;
+
+            // responseQueue.push(response);
+        }
+        else
+        {
+            std::cout<<"Consumer exiting\n"<<std::endl;
+            return;
+        }
+
+    }
+}

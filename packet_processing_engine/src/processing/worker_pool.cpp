@@ -1,13 +1,15 @@
-#include "processing/worker_pool.hpp"
+#include "../../include/processing/worker_pool.hpp"
+#include <iostream>
 
-WorkerPool::WorkerPool(BoundedQueue<Message>& requestQueue, BoundedQueue<Message>& responseQueue, std::size_t numberOfThreads) : 
-requestQueue(requestQueue), responseQueue(responseQueue), numberOfThreads(numberOfThreads)
+WorkerPool::WorkerPool(BoundedQueue<Message>& requestQueue, BoundedQueue<Message>& responseQueue, 
+    PacketProcesser& processor, std::size_t numberOfThreads) : 
+requestQueue(requestQueue), responseQueue(responseQueue), processor(processor), numberOfThreads(numberOfThreads)
 {
 }
 
 void WorkerPool::startWorkers()
 {
-    for(int i=0;i<numberOfThreads;i++)
+    for(int i=0;i<static_cast<int>(numberOfThreads);i++)
     {
         workers.emplace_back(&WorkerPool::workerPool, this);
     }
@@ -16,7 +18,7 @@ void WorkerPool::startWorkers()
 void WorkerPool::shutDown()
 {
     requestQueue.shutdown();
-    for(int i=0;i<workers.size();i++)
+    for(int i=0;i<static_cast<int>(workers.size());i++)
     {
         if(workers[i].joinable())
         {
@@ -35,12 +37,12 @@ void WorkerPool::workerPool()
             std::cout<<"Queue is empty exiting"<<std::endl;
             return;
         }
-        PacketProcessor::PacketProcessingResult res = processor.process(*msg);
+        PacketProcessingResult res = processor.process(*msg);
         std::cout<<"Packet processed and status is : "<<static_cast<int>(res.status)<<"Response is : "<<res.response<<std::endl;
 
         Message response;
         response.clientSocket = msg->clientSocket;
-        response.paylaod = res.response;
+        response.payload = res.response;
 
         responseQueue.push(response);
     }

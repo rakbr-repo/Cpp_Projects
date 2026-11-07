@@ -36,7 +36,7 @@ int main()
         return 1;
     }
 
-    const char* message = "Hello! Server\n";
+    const char* message = "Hello!\nServer\n";
     size_t messageLength = strlen(message);
     size_t totalBytesSent = 0;
 
