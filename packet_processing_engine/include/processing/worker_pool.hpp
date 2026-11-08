@@ -6,18 +6,21 @@
 #include "common/message.hpp"
 #include <thread>
 #include <vector>
+#include <unistd.h>
 
 class WorkerPool
 {
     private:
     BoundedQueue<Message>& requestQueue;
     BoundedQueue<Message>& responseQueue;
+    int& responseEventFd;
     std::vector<std::thread> workers;
     PacketProcesser& processor;
     std::size_t numberOfThreads;
     void workerPool();
     public:
-    WorkerPool(BoundedQueue<Message>& requestQueue, BoundedQueue<Message>& responseQueue, PacketProcesser& processor, std::size_t numberOfThreads);
+    WorkerPool(BoundedQueue<Message>& requestQueue, BoundedQueue<Message>& responseQueue,
+         PacketProcesser& processor,int& responseEventFd,std::size_t numberOfThreads);
 
     void startWorkers();
     void shutDown();

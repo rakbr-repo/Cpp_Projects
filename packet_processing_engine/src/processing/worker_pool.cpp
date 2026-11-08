@@ -1,9 +1,13 @@
 #include "../../include/processing/worker_pool.hpp"
+#include <cerrno>
+#include <cstddef>
 #include <iostream>
+#include <unistd.h>
+#include<iostream>
 
 WorkerPool::WorkerPool(BoundedQueue<Message>& requestQueue, BoundedQueue<Message>& responseQueue, 
-    PacketProcesser& processor, std::size_t numberOfThreads) : 
-requestQueue(requestQueue), responseQueue(responseQueue), processor(processor), numberOfThreads(numberOfThreads)
+    PacketProcesser& processor,int& responseEventFd, std::size_t numberOfThreads) : 
+requestQueue(requestQueue), responseQueue(responseQueue), processor(processor),responseEventFd(responseEventFd), numberOfThreads(numberOfThreads)
 {
 }
 
@@ -45,5 +49,26 @@ void WorkerPool::workerPool()
         response.payload = res.response;
 
         responseQueue.push(response);
+
+        std::uint64_t value = 1;
+        std::cout<<"Response fd : "<<responseEventFd<<std::endl;
+        std::size_t bytesWritten = write(responseEventFd, &value, sizeof(value));
+        std::cout<<"bytesWritten  : "<<static_cast<int>(bytesWritten)<<std::endl;
+
+        if(bytesWritten == sizeof(value))
+        {
+            break;
+        }
+
+        if(bytesWritten == -1 && errno == EINTR)
+        {
+            continue;
+        }
+        else if(bytesWritten == -1 && (errno == EWOULDBLOCK || errno == EAGAIN))
+        {
+            break;
+        }
+        perror("eventfd write");
+        break;
     }
 }

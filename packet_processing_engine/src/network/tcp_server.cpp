@@ -15,8 +15,9 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-TcpServer::TcpServer(BoundedQueue<Message>& requestQueue, BoundedQueue<Message>& responseQueue) : 
-connHandler(std::make_unique<ConnectionHandler>()) , requestQueue(requestQueue), responseQueue(responseQueue) , running(true)
+TcpServer::TcpServer(BoundedQueue<Message>& requestQueue, BoundedQueue<Message>& responseQueue,int& responseEventFd) : 
+connHandler(std::make_unique<ConnectionHandler>()) , requestQueue(requestQueue), responseQueue(responseQueue), 
+responseEventFd(responseEventFd) , running(true)
 {}
 
 bool TcpServer::setNonBlocking(int fd)
@@ -112,6 +113,7 @@ int TcpServer::initializeServerSocket()
     }
 
     responseEventFd = eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
+    std::cout<<"Response fd tcpserver : "<<responseEventFd<<std::endl;
     if(responseEventFd == -1)
     {
         perror("eventfd\n");
@@ -168,7 +170,7 @@ void TcpServer::readClientData(int clientSocket)
     char buffer[4096];
     while(true)
     {
-        std::size_t bytesRead = recv(clientSocket, buffer, sizeof(buffer), 0);
+        ssize_t bytesRead = recv(clientSocket, buffer, sizeof(buffer), 0);
         if(bytesRead > 0)
         {
             auto it = receiveBuffers.find(clientSocket);
@@ -181,6 +183,7 @@ void TcpServer::readClientData(int clientSocket)
             std::string pending = it->second;
             pending.append(buffer, static_cast<std::size_t>(bytesRead));
             std::cout<<"Pending buffer after emplace : "<<pending<<std::endl;
+            std::cout<<"Bytes Read : "<<bytesRead<<std::endl;
 
             std::size_t newLinePos;
             while((newLinePos = pending.find('\n')) != std::string::npos)
@@ -198,7 +201,6 @@ void TcpServer::readClientData(int clientSocket)
                 requestQueue.push(std::move(reqMsg));
                 // connHandler->handleMessage(clientSocket, message);
             }
-            // it->second = std::move(pending);
             continue;
         }
 

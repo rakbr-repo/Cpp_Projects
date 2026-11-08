@@ -21,7 +21,7 @@ class TcpServer
     int serverSocket{-1};
     sockaddr_in serverAddr{};
     int epollFd{-1};
-    int responseEventFd{-1};
+    int& responseEventFd;
     bool running;
     std::unique_ptr<ConnectionHandler> connHandler;
     std::unordered_map<int, std::string> receiveBuffers;
@@ -36,7 +36,7 @@ class TcpServer
     void handleResponseEvent();
     
     public:
-    TcpServer(BoundedQueue<Message>& requestQueue,BoundedQueue<Message>& responseQueue);
+    TcpServer(BoundedQueue<Message>& requestQueue,BoundedQueue<Message>& responseQueue,int& responseEventFd);
     int initializeServerSocket();
     void run();
     void closeServer();

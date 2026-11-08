@@ -36,7 +36,7 @@ int main()
         return 1;
     }
 
-    const char* message = "Hello!\nServer\n";
+    const char* message = "PING\n";
     size_t messageLength = strlen(message);
     size_t totalBytesSent = 0;
 
@@ -58,6 +58,7 @@ int main()
     }
 
     std::cout<<"Message sent successfully\n"<<std::endl;
+    while(1){}
     close(clientSocket);
     return 0;
 }
