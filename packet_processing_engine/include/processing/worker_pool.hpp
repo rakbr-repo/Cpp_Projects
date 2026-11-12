@@ -4,6 +4,7 @@
 #include "processing/packet_processor.hpp"
 #include "queue/bounded_queue.hpp"
 #include "common/message.hpp"
+#include "metrics/metrics.hpp"
 #include <thread>
 #include <vector>
 #include <unistd.h>
@@ -16,11 +17,12 @@ class WorkerPool
     int& responseEventFd;
     std::vector<std::thread> workers;
     PacketProcesser& processor;
+    Metrics& metrics;
     std::size_t numberOfThreads;
     void workerPool();
     public:
     WorkerPool(BoundedQueue<Message>& requestQueue, BoundedQueue<Message>& responseQueue,
-         PacketProcesser& processor,int& responseEventFd,std::size_t numberOfThreads);
+         PacketProcesser& processor,int& responseEventFd,trics& metrMeics,std::size_t numberOfThreads);
 
     void startWorkers();
     void shutDown();

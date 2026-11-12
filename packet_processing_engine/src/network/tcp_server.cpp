@@ -1,6 +1,7 @@
 #include "network/tcp_server.hpp"
 #include <asm-generic/socket.h>
 #include <cerrno>
+#include <chrono>
 #include <climits>
 #include <cstdint>
 #include <cstdio>
@@ -198,6 +199,7 @@ void TcpServer::readClientData(int clientSocket)
                 reqMsg.clientSocket = clientSocket;
                 std::cout<<"Message pushed : "<<message<<std::endl;
                 reqMsg.payload = std::move(message);
+                reqMsg.timeStamp = std::chrono::steady_clock::now();
                 requestQueue.push(std::move(reqMsg));
                 // connHandler->handleMessage(clientSocket, message);
             }
@@ -212,10 +214,12 @@ void TcpServer::readClientData(int clientSocket)
 
         if(errno == EINTR)
         {
+            std::cout<<"EINTR "<<std::endl;
             continue;
         }
         if(errno == EAGAIN || errno == EWOULDBLOCK)
         {
+            std::cout<<"Err egain/ewouldblock "<<std::endl;
             return;
         }
         std::cerr<<" rcv read client data err : "<<std::strerror(errno)<<"\n";

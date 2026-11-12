@@ -4,6 +4,7 @@
 #include <functional>
 #include "include/network/tcp_server.hpp"
 #include "include/common/message.hpp"
+#include "include/metrics/metrics.hpp"
 #include "include/network/connection.hpp"
 #include "include/processing/worker_pool.hpp"
 #include "include/processing/packet_processor.hpp"
@@ -16,6 +17,7 @@ int main()
     int responseEventFd{-1};
     std::unique_ptr<TcpServer> tcpServer = std::make_unique<TcpServer>(requestQueue, responseQueue,responseEventFd);
     std::unique_ptr<PacketProcesser> packetProcesser = std::make_unique<PacketProcesser>();
+    std::unique_ptr<Metrics> metrics = std::make_unique<Metrics>();
     
     // std::thread consumerThread(&TcpServer::testConsumer, tcpServer.get(), std::ref(requestQueue));
     if(tcpServer->initializeServerSocket() == -1)
@@ -24,13 +26,11 @@ int main()
         return 1;
     }
     std::unique_ptr<WorkerPool> workerPool = std::make_unique<WorkerPool>(requestQueue, responseQueue,
-        *packetProcesser.get(),responseEventFd, static_cast<std::size_t>(3));
+        *packetProcesser.get(),responseEventFd,*metrics.get(),static_cast<std::size_t>(3));
     
         
     workerPool->startWorkers();
     tcpServer->run();
-
-
 
     requestQueue.shutdown();
     workerPool->shutDown();

@@ -13,6 +13,7 @@ add_executable(packet_server
     src/network/tcp_server.cpp
     src/processing/packet_processor.cpp
     src/processing/worker_pool.cpp
+    src/metrics/metrics.cpp
 )
 
 target_include_directories(packet_server PRIVATE include)

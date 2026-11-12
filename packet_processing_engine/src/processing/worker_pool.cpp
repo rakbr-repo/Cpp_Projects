@@ -1,13 +1,15 @@
 #include "../../include/processing/worker_pool.hpp"
 #include <cerrno>
+#include <chrono>
 #include <cstddef>
 #include <iostream>
 #include <unistd.h>
 #include<iostream>
 
 WorkerPool::WorkerPool(BoundedQueue<Message>& requestQueue, BoundedQueue<Message>& responseQueue, 
-    PacketProcesser& processor,int& responseEventFd, std::size_t numberOfThreads) : 
-requestQueue(requestQueue), responseQueue(responseQueue), processor(processor),responseEventFd(responseEventFd), numberOfThreads(numberOfThreads)
+    PacketProcesser& processor,int& responseEventFd,Metrics& metrics, std::size_t numberOfThreads) : 
+requestQueue(requestQueue), responseQueue(responseQueue), processor(processor),responseEventFd(responseEventFd), 
+metrics(metrics), numberOfThreads(numberOfThreads)
 {
 }
 
@@ -43,6 +45,12 @@ void WorkerPool::workerPool()
         }
         PacketProcessingResult res = processor.process(*msg);
         std::cout<<"Packet processed and status is : "<<static_cast<int>(res.status)<<"Response is : "<<res.response<<std::endl;
+
+        auto startTime = msg->timeStamp;
+        auto endTime = std::chrono::steady_clock::now();
+
+        auto latency = std::chrono::duration_cast<std::chrono::microseconds>(endTime-startTime);
+        metrics.recordLatency(latency);
 
         Message response;
         response.clientSocket = msg->clientSocket;
