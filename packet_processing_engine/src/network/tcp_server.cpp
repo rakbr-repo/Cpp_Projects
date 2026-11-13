@@ -16,8 +16,8 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-TcpServer::TcpServer(BoundedQueue<Message>& requestQueue, BoundedQueue<Message>& responseQueue,int& responseEventFd) : 
-connHandler(std::make_unique<ConnectionHandler>()) , requestQueue(requestQueue), responseQueue(responseQueue), 
+TcpServer::TcpServer(BoundedQueue<Message>& requestQueue, BoundedQueue<Message>& responseQueue, Metrics& metrics,int& responseEventFd) : 
+connHandler(std::make_unique<ConnectionHandler>()) , metrics(metrics), requestQueue(requestQueue), responseQueue(responseQueue), 
 responseEventFd(responseEventFd) , running(true)
 {}
 
@@ -200,8 +200,13 @@ void TcpServer::readClientData(int clientSocket)
                 std::cout<<"Message pushed : "<<message<<std::endl;
                 reqMsg.payload = std::move(message);
                 reqMsg.timeStamp = std::chrono::steady_clock::now();
-                requestQueue.push(std::move(reqMsg));
-                // connHandler->handleMessage(clientSocket, message);
+                metrics.incrementReceivedMessages();
+                bool accepted = requestQueue.push(std::move(reqMsg));
+                if(!accepted)
+                {
+                    std::cout<<"Message rejected from queue"<<std::endl;
+                    metrics.incrementRejectMessages();
+                }
             }
             continue;
         }

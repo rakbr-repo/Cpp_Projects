@@ -1,6 +1,7 @@
 #pragma once
 #include "connection.hpp"
 #include "queue/bounded_queue.hpp"
+#include "metrics/metrics.hpp"
 #include "common/message.hpp"
 #include <cstdint>
 #include <iostream>
@@ -27,6 +28,7 @@ class TcpServer
     std::unordered_map<int, std::string> receiveBuffers;
     BoundedQueue<Message>& responseQueue;
     BoundedQueue<Message>& requestQueue;
+    Metrics& metrics;
 
     bool setNonBlocking(int fd);
     bool addToEpoll(int fd, std::uint32_t events);
@@ -36,7 +38,7 @@ class TcpServer
     void handleResponseEvent();
     
     public:
-    TcpServer(BoundedQueue<Message>& requestQueue,BoundedQueue<Message>& responseQueue,int& responseEventFd);
+    TcpServer(BoundedQueue<Message>& requestQueue,BoundedQueue<Message>& responseQueue,Metrics& metrics,int& responseEventFd);
     int initializeServerSocket();
     void run();
     void closeServer();

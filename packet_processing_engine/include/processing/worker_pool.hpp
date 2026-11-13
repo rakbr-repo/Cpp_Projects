@@ -22,7 +22,7 @@ class WorkerPool
     void workerPool();
     public:
     WorkerPool(BoundedQueue<Message>& requestQueue, BoundedQueue<Message>& responseQueue,
-         PacketProcesser& processor,int& responseEventFd,trics& metrMeics,std::size_t numberOfThreads);
+         PacketProcesser& processor,int& responseEventFd,Metrics& metrics,std::size_t numberOfThreads);
 
     void startWorkers();
     void shutDown();

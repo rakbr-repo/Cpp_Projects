@@ -46,6 +46,7 @@ void WorkerPool::workerPool()
         PacketProcessingResult res = processor.process(*msg);
         std::cout<<"Packet processed and status is : "<<static_cast<int>(res.status)<<"Response is : "<<res.response<<std::endl;
 
+        res.status == PacketProcessingStatus::SUCCESS ? metrics.incrementProcessedMessage() : metrics.incrementFailedMessage();
         auto startTime = msg->timeStamp;
         auto endTime = std::chrono::steady_clock::now();
 
@@ -60,7 +61,7 @@ void WorkerPool::workerPool()
 
         std::uint64_t value = 1;
         std::cout<<"Response fd : "<<responseEventFd<<std::endl;
-        std::size_t bytesWritten = write(responseEventFd, &value, sizeof(value));
+        ssize_t bytesWritten = write(responseEventFd, &value, sizeof(value));
         std::cout<<"bytesWritten  : "<<static_cast<int>(bytesWritten)<<std::endl;
 
         if(bytesWritten == sizeof(value))

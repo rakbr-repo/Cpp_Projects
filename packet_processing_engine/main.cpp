@@ -15,11 +15,12 @@ int main()
     BoundedQueue<Message> responseQueue(100);
     BoundedQueue<Message> requestQueue(100);
     int responseEventFd{-1};
-    std::unique_ptr<TcpServer> tcpServer = std::make_unique<TcpServer>(requestQueue, responseQueue,responseEventFd);
-    std::unique_ptr<PacketProcesser> packetProcesser = std::make_unique<PacketProcesser>();
     std::unique_ptr<Metrics> metrics = std::make_unique<Metrics>();
+    std::unique_ptr<TcpServer> tcpServer = std::make_unique<TcpServer>(requestQueue, responseQueue,*metrics.get(),responseEventFd);
+    std::unique_ptr<PacketProcesser> packetProcesser = std::make_unique<PacketProcesser>();
     
     // std::thread consumerThread(&TcpServer::testConsumer, tcpServer.get(), std::ref(requestQueue));
+    metrics->startTimeForThroughput();
     if(tcpServer->initializeServerSocket() == -1)
     {
         std::cout<<"Failed to init tcp server\n";
@@ -32,6 +33,7 @@ int main()
     workerPool->startWorkers();
     tcpServer->run();
 
+    metrics->printStatistics();
     requestQueue.shutdown();
     workerPool->shutDown();
     responseQueue.shutdown();
