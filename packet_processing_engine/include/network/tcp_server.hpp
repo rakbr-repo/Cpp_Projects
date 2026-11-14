@@ -42,5 +42,4 @@ class TcpServer
     int initializeServerSocket();
     void run();
     void closeServer();
-    void testConsumer(BoundedQueue<Message>& responseQueue);
 };

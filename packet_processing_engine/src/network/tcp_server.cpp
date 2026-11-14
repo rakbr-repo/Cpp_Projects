@@ -378,27 +378,3 @@ void TcpServer::closeServer()
         responseEventFd = -1;
     }
 }
-
-void TcpServer::testConsumer(BoundedQueue<Message>& responseQueue)
-{
-    while(true)
-    {
-        auto msg = requestQueue.pop();
-
-        if(msg)
-        {
-            std::cout<<"Message popped from consumer : "<<msg->payload<<std::endl;
-            // Message response;
-            // response.clientSocket = msg->clientSocket;
-            // response.payload = msg->payload;
-
-            // responseQueue.push(response);
-        }
-        else
-        {
-            std::cout<<"Consumer exiting\n"<<std::endl;
-            return;
-        }
-
-    }
-}

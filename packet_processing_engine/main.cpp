@@ -19,7 +19,6 @@ int main()
     std::unique_ptr<TcpServer> tcpServer = std::make_unique<TcpServer>(requestQueue, responseQueue,*metrics.get(),responseEventFd);
     std::unique_ptr<PacketProcesser> packetProcesser = std::make_unique<PacketProcesser>();
     
-    // std::thread consumerThread(&TcpServer::testConsumer, tcpServer.get(), std::ref(requestQueue));
     metrics->startTimeForThroughput();
     if(tcpServer->initializeServerSocket() == -1)
     {
@@ -37,7 +36,6 @@ int main()
     requestQueue.shutdown();
     workerPool->shutDown();
     responseQueue.shutdown();
-    // consumerThread.join();
     tcpServer->closeServer();
 
 
