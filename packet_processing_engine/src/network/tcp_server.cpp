@@ -3,6 +3,7 @@
 #include <cerrno>
 #include <chrono>
 #include <climits>
+#include <csignal>
 #include <cstdint>
 #include <cstdio>
 #include <fcntl.h>
@@ -15,6 +16,13 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <unistd.h>
+
+static volatile std::sig_atomic_t stopRequested = 0;
+
+static void handleSignal(int signal)
+{
+    stopRequested = 1;
+}
 
 TcpServer::TcpServer(BoundedQueue<Message>& requestQueue, BoundedQueue<Message>& responseQueue, Metrics& metrics,int& responseEventFd) : 
 connHandler(std::make_unique<ConnectionHandler>()) , metrics(metrics), requestQueue(requestQueue), responseQueue(responseQueue), 
@@ -124,6 +132,13 @@ int TcpServer::initializeServerSocket()
     {
         return -1;
     }
+
+    struct sigaction sa{};
+    sa.sa_handler = handleSignal;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = 0;
+    sigaction(SIGINT,&sa,nullptr);
+    sigaction(SIGTERM,&sa,nullptr);
 
     std::cout<<"Server socket created and the fd and its listening: "<<serverSocket<<std::endl;
     return serverSocket;
@@ -291,7 +306,7 @@ void TcpServer::run()
 
     epoll_event events[64];
 
-    while(running)
+    while(!stopRequested)
     {
         int eventCount = epoll_wait(epollFd, events,64, -1);
 
