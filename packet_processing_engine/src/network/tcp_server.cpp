@@ -216,8 +216,7 @@ void TcpServer::readClientData(int clientSocket)
                 reqMsg.payload = std::move(message);
                 reqMsg.timeStamp = std::chrono::steady_clock::now();
                 metrics.incrementReceivedMessages();
-                bool accepted = requestQueue.push(std::move(reqMsg));
-                if(!accepted)
+                if(!requestQueue.tryPush(std::move(reqMsg)))
                 {
                     std::cout<<"Message rejected from queue"<<std::endl;
                     metrics.incrementRejectMessages();

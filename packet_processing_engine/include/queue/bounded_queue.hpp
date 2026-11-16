@@ -29,7 +29,7 @@ class BoundedQueue
         }
     }
 
-    bool push(T message)
+    bool push(T&& message)
     {
         std::unique_lock<std::mutex> lock(mtx);
         notFull.wait(lock,[this]{
@@ -43,6 +43,19 @@ class BoundedQueue
 
         storageQ.push(std::move(message));
         lock.unlock();
+        notEmpty.notify_one();
+        return true;
+    }
+
+    bool tryPush(T&& message)
+    {
+        std::unique_lock<std::mutex> lck(mtx);
+        if(storageQ.size()>=max_limit || closed)
+        {
+            return false;
+        }
+        storageQ.push(std::move(message));
+        lck.unlock();
         notEmpty.notify_one();
         return true;
     }
@@ -102,7 +115,7 @@ class BoundedQueue
     std::size_t size()
     {
         std::lock_guard<std::mutex> lck(mtx);
-        return max_limit;
+        return storageQ.size();
     }
 
 };

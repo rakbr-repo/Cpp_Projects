@@ -57,7 +57,7 @@ void WorkerPool::workerPool()
         response.clientSocket = msg->clientSocket;
         response.payload = res.response;
 
-        responseQueue.push(response);
+        responseQueue.push(std::move(response));
 
         std::uint64_t value = 1;
         std::cout<<"Response fd : "<<responseEventFd<<std::endl;
